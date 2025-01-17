@@ -39,6 +39,10 @@ async def is_user_banned(user_id: int) -> bool:
         async with db.execute('SELECT user_id FROM banned_users WHERE user_id = ?', (user_id,)) as cursor:
             return await cursor.fetchone() is not None
 
+async def is_user_in_channel(user_id: int) -> bool:
+    member = await bot.get_chat_member(QUESTIONS_CHANNEL_ID, user_id)
+    return member.status in ['member', 'administrator', 'creator']
+
 async def unban_user(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('DELETE FROM banned_users WHERE user_id = ?', (user_id,))
@@ -77,6 +81,9 @@ async def start_command(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
         return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
+        return
     await message.answer("👋 Привет! Здесь ты можешь задать свой анонимный вопрос. Просто напиши его в следующем сообщении.")
     await state.set_state(QuestionState.waiting_for_question)
     await log_to_channel(message.from_user, message.text, "Запустил бота", message)
@@ -85,6 +92,9 @@ async def start_command(message: types.Message, state: FSMContext):
 async def handle_question(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
+        return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
         return
     if message.text.startswith("/start"):
         await message.reply("Задай вопрос!")
@@ -103,6 +113,9 @@ async def handle_photo(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
         return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
+        return
     photo = message.photo[-1]
     caption = message.caption if message.caption else "Без подписи"
 
@@ -120,6 +133,9 @@ async def handle_voice(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
         return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
+        return
     await bot.send_voice(
         chat_id=QUESTIONS_CHANNEL_ID,
         voice=message.voice.file_id,
@@ -134,6 +150,9 @@ async def handle_video_note(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
         return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
+        return
     await bot.send_video_note(
         chat_id=QUESTIONS_CHANNEL_ID,
         video_note=message.video_note.file_id
@@ -147,6 +166,9 @@ async def handle_sticker(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
         return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
+        return
     await bot.send_sticker(
         chat_id=QUESTIONS_CHANNEL_ID,
         sticker=message.sticker.file_id
@@ -159,6 +181,9 @@ async def handle_sticker(message: types.Message, state: FSMContext):
 async def handle_video(message: types.Message, state: FSMContext):
     if await is_user_banned(message.from_user.id):
         await message.answer("Вы были заблокированы.")
+        return
+    if not await is_user_in_channel(message.from_user.id):
+        await message.answer("Вы должны быть участником канала, чтобы задавать вопросы.")
         return
     caption = message.caption if message.caption else "Без подписи"
 
